@@ -1,6 +1,6 @@
 {
   "name": "bcf-viewer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Binary VCF viewer with variant type classification, header metadata, and genotype field parsing",
   "extensions": [
     "bcf"
