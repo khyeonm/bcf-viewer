@@ -1,8 +1,9 @@
 // AutoPipe Plugin: bcf-viewer
-// BCF (Binary VCF) viewer with colored bases, metadata, and server-side pagination
+// BCF (Binary VCF) viewer — data table with server-side pagination
+// Requires bcftools or Docker on the remote server
 // Supported extensions: bcf
 
-(function () {
+(function() {
   var PAGE_SIZE = 100;
   var _container = null;
   var _metaCache = {};
@@ -27,12 +28,16 @@
       '.bcf-viewer .bcf-pagination { display: flex; align-items: center; gap: 8px; padding: 10px 0; justify-content: center; font-size: 13px; color: #666; }' +
       '.bcf-viewer .bcf-pagination button { padding: 4px 12px; border: 1px solid #ddd; border-radius: 4px; background: #f8f8f8; cursor: pointer; font-size: 12px; }' +
       '.bcf-viewer .bcf-pagination button:hover { background: #eee; }' +
-      '.bcf-viewer .bcf-pagination button:disabled { color: #ccc; cursor: not-allowed; background: #fafafa; }';
+      '.bcf-viewer .bcf-pagination button:disabled { color: #ccc; cursor: not-allowed; background: #fafafa; }' +
+      '.bcf-viewer .bcf-error { padding: 24px; text-align: center; color: #666; }' +
+      '.bcf-viewer .bcf-error h3 { margin: 0 0 8px 0; color: #333; }' +
+      '.bcf-viewer .bcf-error p { margin: 0 0 8px 0; font-size: 13px; }' +
+      '.bcf-viewer .bcf-error code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 12px; }';
     document.head.appendChild(style);
   }
 
   function colorBases(seq) {
-    return seq.replace(/[ATCGN]/gi, function (b) {
+    return seq.replace(/[ATCGN]/gi, function(b) {
       var u = b.toUpperCase();
       if (u === 'A') return '<span class="base-A">' + b + '</span>';
       if (u === 'T') return '<span class="base-T">' + b + '</span>';
@@ -56,13 +61,13 @@
   function renderTable(name, headers, rows, total, page) {
     var totalPages = Math.ceil(total / PAGE_SIZE) || 1;
     var html = '<table><tr>';
-    headers.forEach(function (h) {
+    headers.forEach(function(h) {
       html += '<th>' + escapeHtml(h) + '</th>';
     });
     html += '</tr>';
-    rows.forEach(function (rec) {
+    rows.forEach(function(rec) {
       html += '<tr>';
-      rec.forEach(function (val, i) {
+      rec.forEach(function(val, i) {
         if (headers[i] === 'REF' || headers[i] === 'ALT') {
           html += '<td class="bcf-seq">' + colorBases(escapeHtml(val)) + '</td>';
         } else {
@@ -94,6 +99,16 @@
     return html;
   }
 
+  function renderError(msg) {
+    return '<div class="bcf-viewer"><div class="bcf-error">' +
+      '<div style="font-size:48px;margin-bottom:16px">&#9888;</div>' +
+      '<h3>Cannot Read BCF File</h3>' +
+      '<p>' + escapeHtml(msg) + '</p>' +
+      '<p style="color:#888;font-size:12px">BCF is a binary format. To view data, install one of:</p>' +
+      '<p><code>bcftools</code> on the remote server, or <code>Docker</code> (auto-pulls bcftools image)</p>' +
+      '</div></div>';
+  }
+
   async function renderPage(name, page) {
     if (!_container) return;
 
@@ -103,8 +118,7 @@
 
     var data = await fetchPage(name, page);
     if (data.error) {
-      _container.innerHTML =
-        '<div class="bcf-viewer"><p style="color:red">Error: ' + escapeHtml(data.error) + '</p></div>';
+      _container.innerHTML = renderError(data.error);
       return;
     }
 
@@ -118,7 +132,7 @@
     var html = '<div class="bcf-viewer">';
     html += '<p class="bcf-meta">' + (data.total || 0).toLocaleString() + ' variant(s)</p>';
 
-    // Collapsible metadata (## lines)
+    // Collapsible metadata
     if (cached.meta) {
       var metaLines = cached.meta.split('\n');
       html +=
@@ -135,24 +149,23 @@
   }
 
   // Global pagination handler
-  window._bcfPluginPaginate = function (name, page) {
+  window._bcfPluginPaginate = function(name, page) {
     if (page < 0) return;
     renderPage(name, page);
   };
 
   window.AutoPipePlugin = {
-    render: function (container, fileUrl, filename) {
+    render: function(container, fileUrl, filename) {
       _container = container;
       _container.innerHTML = '<div class="bcf-viewer"><p class="bcf-meta">Loading BCF...</p></div>';
-      renderPage(filename, 0).catch(function (e) {
-        _container.innerHTML =
-          '<div class="bcf-viewer"><p style="color:red">Error: ' + e.message + '</p></div>';
+      renderPage(filename, 0).catch(function(e) {
+        _container.innerHTML = renderError(e.message);
       });
     },
-    destroy: function () {
+    destroy: function() {
       _container = null;
       _metaCache = {};
       delete window._bcfPluginPaginate;
-    },
+    }
   };
 })();

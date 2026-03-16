@@ -1,20 +1,27 @@
 {
   "name": "bcf-viewer",
-  "version": "1.3.0",
-  "description": "BCF (Binary VCF) viewer with colored bases, metadata, and pagination",
+  "version": "1.2.0",
+  "description": "Binary VCF viewer with server-side pagination via bcftools (with Docker fallback)",
   "extensions": [
     "bcf"
   ],
   "entry": "index.js",
   "style": "style.css",
   "data_source": {
-    "type": "docker",
-    "image": "biocontainers/bcftools:v1.9-1-deb_cv1",
-    "row_count": "bcftools view {file} | grep -c -v '^#'",
-    "metadata": "bcftools view -h {file}",
-    "rows": "bcftools view {file} | grep -v '^#' | sed -n '{start},{end}p'",
-    "col_headers": [],
+    "type": "text",
+    "row_count": "bcftools view '{file}' | grep -c -v '^#'",
+    "metadata": "bcftools view -h '{file}'",
+    "rows": "bcftools view '{file}' | grep -v '^#' | sed -n '{start},{end}p'",
     "meta_parse": "vcf_style",
-    "allow_nonzero_exit": false
+    "fallback": [
+      {
+        "type": "docker",
+        "image": "biocontainers/bcftools:v1.9-1-deb_cv1",
+        "row_count": "bcftools view '{file}' | grep -c -v '^#'",
+        "metadata": "bcftools view -h '{file}'",
+        "rows": "bcftools view '{file}' | grep -v '^#' | sed -n '{start},{end}p'",
+        "meta_parse": "vcf_style"
+      }
+    ]
   }
 }
