@@ -113,7 +113,7 @@
     if (!_container) return;
 
     if (page > 0) {
-      _container.innerHTML = '<div class="bcf-viewer"><p class="bcf-meta">Loading page...</p></div>';
+      _container.innerHTML = '<div class="ap-loading">Loading...</div>';
     }
 
     var data = await fetchPage(name, page);
@@ -157,7 +157,7 @@
   window.AutoPipePlugin = {
     render: function(container, fileUrl, filename) {
       _container = container;
-      _container.innerHTML = '<div class="bcf-viewer"><p class="bcf-meta">Loading BCF...</p></div>';
+      _container.innerHTML = '<div class="ap-loading">Loading...</div>';
       renderPage(filename, 0).catch(function(e) {
         _container.innerHTML = renderError(e.message);
       });
